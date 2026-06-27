@@ -11,7 +11,7 @@ using UnityEngine;
 
 namespace FastGrenadeThrow
 {
-    [BepInPlugin("com.vultify.fastgrenadethrow", "Fast Grenade Throw", "1.0.0")]
+    [BepInPlugin("com.vultify.fastgrenadethrow", "Fast Grenade Throw", "1.0.1")]
     public class FastGrenadeThrowPlugin : BaseUnityPlugin
     {
         internal static ManualLogSource Log;
@@ -60,11 +60,11 @@ namespace FastGrenadeThrow
             if (player == null || !player.IsYourPlayer) return;
             if (!player.HealthController.IsAlive) return;
 
-            if (QuickThrowOverhand.Value.IsDown())
+            if (Input.GetKeyDown(QuickThrowOverhand.Value.MainKey))
             {
                 TryQuickThrow(player, lowThrow: false);
             }
-            else if (QuickThrowUnderhand.Value.IsDown())
+            else if (Input.GetKeyDown(QuickThrowUnderhand.Value.MainKey))
             {
                 TryQuickThrow(player, lowThrow: true);
             }
@@ -72,12 +72,18 @@ namespace FastGrenadeThrow
 
         private static void TryQuickThrow(Player player, bool lowThrow)
         {
+            if (player.HandsController is Player.QuickGrenadeThrowHandsController)
+                return;
+
             var grenadeItem = FindGrenade(player);
             if (grenadeItem == null)
             {
                 Log.LogWarning("No grenade found in pockets or rig.");
                 return;
             }
+
+            if (player.HandsController?.Item == grenadeItem)
+                return;
 
             ForceLowThrow = lowThrow;
 
@@ -105,19 +111,8 @@ namespace FastGrenadeThrow
             var equipment = player.Profile?.Inventory?.Equipment;
             if (equipment == null) return null;
 
-            var pockets = equipment.GetSlot(EquipmentSlot.Pockets);
-            var rig = equipment.GetSlot(EquipmentSlot.TacticalVest);
-
-            foreach (var slot in new[] { pockets, rig })
-            {
-                if (slot?.ContainedItem == null) continue;
-
-                var items = slot.ContainedItem.GetAllItems();
-                var grenade = items?.FirstOrDefault(i => i is ThrowWeapItemClass) as ThrowWeapItemClass;
-                if (grenade != null) return grenade;
-            }
-
-            return null;
+            return equipment.GetAllItems()
+                .FirstOrDefault(i => i is ThrowWeapItemClass) as ThrowWeapItemClass;
         }
     }
 
