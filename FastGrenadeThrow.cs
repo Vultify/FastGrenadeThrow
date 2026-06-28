@@ -11,7 +11,7 @@ using UnityEngine;
 
 namespace FastGrenadeThrow
 {
-    [BepInPlugin("com.vultify.fastgrenadethrow", "Fast Grenade Throw", "1.0.1")]
+    [BepInPlugin("com.vultify.fastgrenadethrow", "Fast Grenade Throw", "1.0.2")]
     public class FastGrenadeThrowPlugin : BaseUnityPlugin
     {
         internal static ManualLogSource Log;
@@ -19,6 +19,7 @@ namespace FastGrenadeThrow
         public static ConfigEntry<KeyboardShortcut> QuickThrowOverhand;
         public static ConfigEntry<KeyboardShortcut> QuickThrowUnderhand;
         internal static bool ForceLowThrow;
+        private static bool _throwInProgress = false;
 
         private void Awake()
         {
@@ -72,6 +73,8 @@ namespace FastGrenadeThrow
 
         private static void TryQuickThrow(Player player, bool lowThrow)
         {
+            if (_throwInProgress) return;
+
             if (player.HandsController is Player.QuickGrenadeThrowHandsController)
                 return;
 
@@ -86,6 +89,7 @@ namespace FastGrenadeThrow
                 return;
 
             ForceLowThrow = lowThrow;
+            _throwInProgress = true;
 
             player.Proceed(grenadeItem, delegate(Result<GInterface206> result)
             {
@@ -94,12 +98,14 @@ namespace FastGrenadeThrow
                     result.Value?.SetOnUsedCallback(delegate(Result<GInterface205<ThrowWeapItemClass>> throwResult)
                     {
                         ForceLowThrow = false;
+                        _throwInProgress = false;
                         player.TrySetLastEquippedWeapon();
                     });
                 }
                 else
                 {
                     ForceLowThrow = false;
+                    _throwInProgress = false;
                     Log.LogWarning($"Failed to proceed with quick throw: {result.Error}");
                     player.TrySetLastEquippedWeapon();
                 }
