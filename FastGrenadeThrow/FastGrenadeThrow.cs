@@ -76,7 +76,7 @@ namespace FastGrenadeThrow
         internal static void DebugLog(string message)
         {
             if (DebugLogging.Value)
-                Log.LogDebug($"[FGT Debug] {message}");
+                Log.LogInfo($"[FGT Debug] {message}");
         }
 
         private void Update()

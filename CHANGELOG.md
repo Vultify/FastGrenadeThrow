@@ -3,6 +3,8 @@
 All notable changes to Fast Grenade Throw are documented here. Format follows [Keep a Changelog](https://keepachangelog.com/); versions follow [SemVer](https://semver.org/).
 
 ## [Unreleased]
+### Fixed
+- Debug log lines (F12 toggle) now emit at Info level so they are visible at default BepInEx console/log settings
 
 ## [1.0.4] - 2026-07-01
 ### Fixed
