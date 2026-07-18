@@ -163,7 +163,7 @@ namespace FastGrenadeThrow
         }
     }
 
-    // Applied only when Use Items Anywhere is not installed — adds backpack to grenade search
+    // only when Use Items Anywhere isn't installed, adds backpack to the grenade search
     public static class BackpackGrenadePatch
     {
         public static bool Prefix(InventoryController inventoryController, ref List<ThrowWeapItemClass> __result)
