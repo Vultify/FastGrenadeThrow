@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
@@ -9,6 +10,7 @@ using Comfort.Common;
 using HarmonyLib;
 using EFT;
 using EFT.InventoryLogic;
+using EFT.UI.DragAndDrop;
 using UnityEngine;
 
 namespace FastGrenadeThrow
@@ -68,6 +70,15 @@ namespace FastGrenadeThrow
                 harmony.Patch(
                     AccessTools.Method(typeof(InventoryExtension), "GetThrowablePriorityGrenadesList"),
                     prefix: new HarmonyMethod(typeof(BackpackGrenadePatch).GetMethod(nameof(BackpackGrenadePatch.Prefix))));
+
+                // paired with the patch above: the quick-slot only tracks rig and pockets, so the
+                // slots we added need the icon resynced by hand
+                harmony.Patch(
+                    AccessTools.Method(typeof(FastAccessGrenadeItemView), nameof(FastAccessGrenadeItemView.OnItemRemoved)),
+                    postfix: new HarmonyMethod(typeof(GrenadeQuickSlotRefreshPatch).GetMethod(nameof(GrenadeQuickSlotRefreshPatch.AfterRemoved))));
+                harmony.Patch(
+                    AccessTools.Method(typeof(FastAccessGrenadeItemView), nameof(FastAccessGrenadeItemView.OnItemAdded)),
+                    postfix: new HarmonyMethod(typeof(GrenadeQuickSlotRefreshPatch).GetMethod(nameof(GrenadeQuickSlotRefreshPatch.AfterAdded))));
             }
 
             Log.LogInfo("Fast Grenade Throw loaded.");
@@ -188,6 +199,60 @@ namespace FastGrenadeThrow
                 .ToList();
 
             return false;
+        }
+    }
+
+    // The grenade quick-slot caches its own list and only refreshes it for grenades entering or
+    // leaving the rig and pockets — Equipment.GrenadeThrowingSlots is hardcoded to those two. The
+    // armband and backpack grenades BackpackGrenadePatch surfaces therefore never update the icon,
+    // leaving it showing one that's already been thrown until the next throw puts something in hand.
+    // Re-seed from the same priority list the throw itself picks from so the icon always names the
+    // grenade that would actually come out next.
+    public static class GrenadeQuickSlotRefreshPatch
+    {
+        private static readonly FieldInfo SortedListField =
+            AccessTools.Field(typeof(FastAccessGrenadeItemView), "_sortedGrenadeList");
+
+        private static readonly FieldInfo ControllerField =
+            AccessTools.Field(typeof(QuickSlotView), "InventoryController");
+
+        public static void AfterRemoved(FastAccessGrenadeItemView __instance, RemoveItemEventArgs obj) =>
+            Resync(__instance, obj);
+
+        public static void AfterAdded(FastAccessGrenadeItemView __instance, AddItemEventArgs obj) =>
+            Resync(__instance, obj);
+
+        private static void Resync(FastAccessGrenadeItemView view, ItemEventArgs args)
+        {
+            try
+            {
+                if (!FastGrenadeThrowPlugin.Enabled.Value) return;
+                if (args == null || args.Status != CommandStatus.Succeed) return;
+                if (!(args.Item is ThrowWeap)) return;
+
+                if (!(ControllerField?.GetValue(view) is InventoryController controller)) return;
+                if (controller.ID != args.OwnerId) return;
+                if (!(SortedListField?.GetValue(view) is List<ThrowWeap> cached)) return;
+
+                var fresh = InventoryExtension.GetThrowablePriorityGrenadesList(controller);
+                if (fresh == null) return;
+
+                cached.Clear();
+                cached.AddRange(fresh);
+
+                // only touch the icon when the answer actually changed, so ordinary rig throws
+                // (which vanilla already handles) don't get rebuilt twice
+                var next = fresh.FirstOrDefault();
+                if (ReferenceEquals(view.TopPriorityGrenade, next)) return;
+
+                view.SetNewTopPriorityGrenade();
+                FastGrenadeThrowPlugin.DebugLog(
+                    $"Quick-slot resynced — {fresh.Count} grenade(s) left, now showing '{next?.LocalizedName() ?? "none"}'");
+            }
+            catch (Exception ex)
+            {
+                FastGrenadeThrowPlugin.Log.LogError($"Grenade quick-slot resync failed: {ex}");
+            }
         }
     }
 

@@ -37,6 +37,12 @@
       <HintPath>$(SPT_PATH)\EscapeFromTarkov_Data\Managed\Comfort.dll</HintPath>
       <Private>false</Private>
     </Reference>
+    <!-- EFT's UI views derive from Odin's SerializedMonoBehaviour, so touching the
+         grenade quick-slot needs this on the reference chain -->
+    <Reference Include="Sirenix.Serialization">
+      <HintPath>$(SPT_PATH)\EscapeFromTarkov_Data\Managed\Sirenix.Serialization.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
   </ItemGroup>
 
 </Project>

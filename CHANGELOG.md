@@ -10,6 +10,7 @@ All notable changes to Fast Grenade Throw are documented here. Format follows [K
 - Rebuilt against the deobfuscated 4.1 client assemblies
 ### Fixed
 - Underhand quick throw, which silently stopped applying on 4.1 because the throw method it hooks was renamed
+- Grenade quick-slot icon showing a grenade that had already been thrown — the vanilla slot only tracks the rig and pockets, so throws and pickups involving the armband or backpack left it stale until the next throw was already underway
 - Debug log lines (F12 toggle) now emit at Info level so they are visible at default BepInEx console/log settings
 
 ## [1.0.4] - 2026-07-01
