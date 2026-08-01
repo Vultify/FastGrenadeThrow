@@ -3,7 +3,13 @@
 All notable changes to Fast Grenade Throw are documented here. Format follows [Keep a Changelog](https://keepachangelog.com/); versions follow [SemVer](https://semver.org/).
 
 ## [Unreleased]
+
+## [2.0.0] - 2026-08-01
+### Changed
+- Now targets SPT 4.1.0 — requires SPT 4.1.x and will not load on 4.0.x
+- Rebuilt against the deobfuscated 4.1 client assemblies
 ### Fixed
+- Underhand quick throw, which silently stopped applying on 4.1 because the throw method it hooks was renamed
 - Debug log lines (F12 toggle) now emit at Info level so they are visible at default BepInEx console/log settings
 
 ## [1.0.4] - 2026-07-01

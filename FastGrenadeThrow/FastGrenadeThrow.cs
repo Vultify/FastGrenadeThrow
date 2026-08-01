@@ -13,7 +13,7 @@ using UnityEngine;
 
 namespace FastGrenadeThrow
 {
-    [BepInPlugin("com.vultify.fastgrenadethrow", "Fast Grenade Throw", "1.0.4")]
+    [BepInPlugin("com.vultify.fastgrenadethrow", "Fast Grenade Throw", "2.0.0")]
     public class FastGrenadeThrowPlugin : BaseUnityPlugin
     {
         internal static ManualLogSource Log;
@@ -66,7 +66,7 @@ namespace FastGrenadeThrow
             {
                 Log.LogInfo("Use Items Anywhere not detected — applying backpack grenade support.");
                 harmony.Patch(
-                    AccessTools.Method(typeof(GClass3373), "GetThrowablePriorityGrenadesList"),
+                    AccessTools.Method(typeof(InventoryExtension), "GetThrowablePriorityGrenadesList"),
                     prefix: new HarmonyMethod(typeof(BackpackGrenadePatch).GetMethod(nameof(BackpackGrenadePatch.Prefix))));
             }
 
@@ -129,12 +129,12 @@ namespace FastGrenadeThrow
             _throwInProgress = true;
             DebugLog($"Calling Proceed with grenade '{grenadeItem.LocalizedName()}' (templateId={grenadeItem.StringTemplateId})");
 
-            player.Proceed(grenadeItem, delegate(Result<GInterface206> result)
+            player.Proceed(grenadeItem, delegate(Result<IQuickGrenadeThrowController> result)
             {
                 if (result.Succeed)
                 {
                     DebugLog("Proceed succeeded — waiting for throw callback.");
-                    result.Value?.SetOnUsedCallback(delegate(Result<GInterface205<ThrowWeapItemClass>> throwResult)
+                    result.Value?.SetOnUsedCallback(delegate(Result<IQuickUseHandsController<ThrowWeap>> throwResult)
                     {
                         DebugLog($"Throw callback fired — success={throwResult.Succeed}{(throwResult.Succeed ? "" : $", error={throwResult.Error}")}");
                         ForceLowThrow = false;
@@ -154,9 +154,9 @@ namespace FastGrenadeThrow
             });
         }
 
-        private static ThrowWeapItemClass FindGrenade(Player player)
+        private static ThrowWeap FindGrenade(Player player)
         {
-            var list = GClass3373.GetThrowablePriorityGrenadesList(player.InventoryController);
+            var list = InventoryExtension.GetThrowablePriorityGrenadesList(player.InventoryController);
             var grenade = list?.FirstOrDefault();
             DebugLog($"FindGrenade: found {list?.Count ?? 0} grenade(s), picking '{grenade?.LocalizedName() ?? "none"}' (templateId={grenade?.StringTemplateId ?? "null"})");
             return grenade;
@@ -166,7 +166,7 @@ namespace FastGrenadeThrow
     // only when Use Items Anywhere isn't installed, adds backpack to the grenade search
     public static class BackpackGrenadePatch
     {
-        public static bool Prefix(InventoryController inventoryController, ref List<ThrowWeapItemClass> __result)
+        public static bool Prefix(InventoryController inventoryController, ref List<ThrowWeap> __result)
         {
             var containers = new List<CompoundItem>();
             var equipment = inventoryController.Inventory.Equipment;
@@ -182,7 +182,7 @@ namespace FastGrenadeThrow
 
             __result = containers
                 .SelectMany(c => c.GetAllItems())
-                .OfType<ThrowWeapItemClass>()
+                .OfType<ThrowWeap>()
                 .Where(inventoryController.Examined)
                 .OrderBy(g => g.ThrowType)
                 .ToList();
@@ -191,7 +191,7 @@ namespace FastGrenadeThrow
         }
     }
 
-    [HarmonyPatch(typeof(Player.BaseGrenadeHandsController), "vmethod_1")]
+    [HarmonyPatch(typeof(Player.BaseGrenadeHandsController), "Throw")]
     public static class ForceLowThrowPatch
     {
         [HarmonyPrefix]
